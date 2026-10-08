@@ -1,0 +1,2 @@
+variable data_file string data_197.lammps
+variable seed equal 197

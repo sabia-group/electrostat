@@ -1,0 +1,18 @@
+variable data string "../data/wrapped.data"
+boundary p p p # slab calculation
+include settings.lmp # styles, groups, computes and fixes
+
+# variable dist equal zhi-zlo-(bound(right,zmax)-bound(left,zmin)) # distance between electrodes
+# print "Distance ${dist}"
+variable C0 equal 0.08846
+variable area equal (xhi-xlo)*(yhi-ylo)
+variable eps0 equal 0.005526349361802015
+variable dist_eff equal v_eps0*v_area/v_C0
+print "Distance ${dist_eff}"
+variable dfield equal -0.1*${dist_eff}/vol # aim for a capacitor charge of .1 e
+
+
+fix fx ele electrode/dfield ${dfield} eta ${eta} algo mat_inv qtotal 0 sub_groups left right
+
+dump 1 ele custom 1 ../csvs/dfield_wrapped.csv id z q
+run 0

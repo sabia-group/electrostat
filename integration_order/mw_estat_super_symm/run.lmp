@@ -1,0 +1,42 @@
+
+boundary p p p
+variable dt        equal 1.0                 # time step [fs],
+timestep ${dt}
+include settings.mod # styles, groups, computes and fixes
+
+
+
+compute zmax_bot bot reduce max z
+compute zmin_top top reduce min z
+variable dist equal c_zmin_top-c_zmax_bot
+run 0
+reset_timestep 0
+variable Lx equal lx
+variable Ly equal ly
+variable Lz equal lz
+print "Dim: ${Lx} ${Ly} ${Lz}"
+print "Distance: ${dist}"
+
+variable th_temp   equal 298.0                       # temperature [K]
+variable th_time   equal 100.0                       # relaxation time thermostat [fs]
+variable efield0 equal -2.0/lz
+fix fxele ele electrode/efield/thermo/nve ${efield0} eta 1.805132 etypes on qtotal 0 offset_group bot read_inv inv.csv sub_groups bot top temp ${th_temp} ${th_time} 1337
+variable efield equal f_fxele[1]
+fix shake SPC shake 1e-4 20 0 b 1 2 a 1
+
+thermo 50
+thermo_style custom step temp c_ctemp epair etotal c_qtop
+
+variable s equal step
+variable qleft equal c_qbot
+variable myTemp equal c_ctemp
+variable etot equal etotal
+variable ekin equal ke
+variable epot equal pe
+compute dip_elec ele dipole
+variable dip_elec equal c_dip_elec[3]
+compute dip_elyt electrolyte dipole
+variable dip_elyt equal c_dip_elyt[3]
+
+fix fxprint all print 1 "${s}, ${dt}, ${efield0}, ${efield}, ${qleft}, ${myTemp}, ${etot}, ${ekin}, ${epot}, ${dip_elec}, ${dip_elyt}" title "step, dt, E0, E, Q, temp, etotal, ekin, epot, dip_elec, dip_elyt" file log.csv screen no
+run 10000

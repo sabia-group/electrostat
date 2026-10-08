@@ -1,0 +1,14 @@
+mw_*
+    - MetalWalls Au electrodes with NaCl-water electrolyte
+    - Only 3 layers per electrode
+mw_estat_super_symm
+    - electrode/efield/thermo/nve actually does BEAEB splitting
+    - estat and nve in one fix
+    - results in log.csv numerically identical to mw_estat_symm
+    - implementation is feat-fix-field-splitting branch
+mw_estat_symm
+    - electrode/efield/thermo with symm_split on
+    - "BEEAB" splitting
+mw_estat_semi_symm
+    - symm_split off, but noise term is integrated in two steps
+    - implementation is in src_ELECTRODE/

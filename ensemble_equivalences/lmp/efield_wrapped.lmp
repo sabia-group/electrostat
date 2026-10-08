@@ -1,0 +1,12 @@
+variable data string "../data/wrapped.data"
+boundary p p p # slab calculation
+include settings.lmp # styles, groups, computes and fixes
+
+variable efield equal -2.0/lz
+
+fix fx ele electrode/efield ${efield} eta ${eta} algo mat_inv qtotal 0
+
+dump 1 ele custom 1 ../csvs/efield_wrapped.csv id z q
+dump 2 elyt custom 1 ../dump_force/efield_wrapped.csv id fx fy fz
+dump 3 all custom 1 ../csvs_all/efield_wrapped.csv id type z q
+run 0

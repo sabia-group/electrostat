@@ -1,0 +1,13 @@
+variable data string "../data/base.data"
+boundary p p f # slab calculation
+include settings.lmp # styles, groups, computes and fixes
+kspace_modify slab 4.0
+
+variable q1 equal 0.1
+variable q2 equal -${q1}
+
+fix fx left electrode/conq ${q2} couple right ${q1}  eta ${eta} algo mat_inv
+
+dump 1 ele custom 1 ../csvs/conq_base.csv id z q
+dump 2 elyt custom 1 ../dump_force/conq_base.csv id fx fy fz
+run 0

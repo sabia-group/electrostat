@@ -1,0 +1,29 @@
+# set boundary in main script because ffield is periodic
+units real
+atom_style full
+pair_style coul/long 15
+kspace_style ewald/electrode 1e-8
+# kspace_modify gewald 2.0 
+
+read_data ${data}
+
+pair_coeff * *
+
+group ele type 1
+group elyt type 2 3
+variable z0 equal bound(ele,zmin)
+variable z1 equal bound(ele,zmax)
+print "${z0}"
+print "${z1}"
+variable zright atom z>(${z1}+${z0})/2
+group zright variable zright
+group right intersect ele zright
+group left subtract ele right
+
+variable q atom q
+compute qright right reduce sum v_q
+compute qleft left reduce sum v_q
+
+variable eta equal 1.979 
+
+thermo_style custom step epair etotal c_qleft c_qright
