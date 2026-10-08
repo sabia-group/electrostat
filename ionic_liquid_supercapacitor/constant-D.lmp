@@ -1,0 +1,23 @@
+# electrodes with constant potential
+# for graphene-ionic liquid supercapacitor
+
+boundary p p p # periodic calculation
+include settings.mod # styles, groups, computes and fixes
+
+variable dist equal bound(top,zmin)-bound(bot,zmax)
+variable eps0 equal 0.005526349693200237
+variable dfield equal -3.0*${dist}/vol # 3e target charge
+compute dip electrolyte dipole
+variable efield equal (v_dfield-c_dip[3]/vol)/v_eps0
+variable dv equal -1.0*v_efield*lz
+
+#fix cond ele electrode/dfield v_dfield eta 1.979 offset_group bot qtotal 0.0 
+fix cond ele electrode/efield v_efield eta 1.979 offset_group bot qtotal 0.0
+
+timestep 0.5
+thermo 50
+thermo_style custom step temp c_ctemp epair etotal c_qbot c_qtop v_dv
+dump            trajectory all xyz 100 positions.xyz
+dump_modify     trajectory element N N N F C C
+run 20000
+write_data "data.final"

@@ -1,0 +1,23 @@
+# electrodes with constant potential
+# for graphene-ionic liquid supercapacitor
+
+boundary p p p # slab calculation
+include settings.mod # styles, groups, computes and fixes
+
+# syntax for the new electrostat
+variable efield equal -2.0/lz
+fix es ele electrode/efield/thermo v_efield eta 1.979 temp 500 100 7 qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv
+
+variable eps0 equal 0.005526349406
+variable dist equal bound(top,zmin)-bound(bot,zmax)
+compute dip electrolyte dipole
+variable dv equal lz*(c_qtop*v_dist/vol+c_dip[3]/vol)/v_eps0
+
+timestep 0.5
+thermo 50
+thermo_style custom step temp c_ctemp epair etotal c_qbot c_qtop v_dv
+dump            trajectory all xyz 100 positions.xyz
+dump_modify     trajectory element N N N F C C
+run 20000
+write_data "data.final"
+

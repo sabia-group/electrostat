@@ -1,0 +1,18 @@
+# units
+UNITS LENGTH=A TIME=fs
+
+# center of mass
+p: POSITION ATOM=1663
+
+# LiCl distance
+d: DISTANCE ATOMS=1663,1664
+
+# keep the ion pair close to the interface with a weak harmonic restraint (probably not needed at all)
+UPPER_WALLS ARG=p.z AT=11.0 KAPPA=100.0
+
+# keep the angle restrained at a given value
+RESTRAINT ARG=d AT=2.0 KAPPA=500.0
+
+# print CV on file
+PRINT ARG=d STRIDE=10 FILE=colvar.dat
+FLUSH STRIDE=1
