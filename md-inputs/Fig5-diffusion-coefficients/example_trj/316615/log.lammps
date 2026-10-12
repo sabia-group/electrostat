@@ -1,0 +1,288 @@
+LAMMPS (29 Aug 2024 - Development - 617f349286)
+OMP_NUM_THREADS environment is not set. Defaulting to 1 thread. (src/comm.cpp:99)
+  using 1 OpenMP thread(s) per MPI task
+# electrodes with electrostat
+# for graphene-ionic liquid supercapacitor
+boundary p p p # periodic calculation
+include step_settings.lmp # data_file, seed
+variable data_file string data_7.lammps
+variable seed equal 7
+include settings.lmp # styles, groups, computes and fixes
+# set boundary in main script because ffield is periodic
+units real
+# distribute electrode atoms among all processors:
+if "$(extract_setting(world_size) % 2) == 0" then "processors * * 2"
+processors * * 2
+
+atom_style full
+pair_style lj/cut/coul/long 15
+pair_modify mix arithmetic
+bond_style harmonic
+angle_style harmonic
+kspace_style pppm/electrode 1e-6
+# kspace_modify in main script because ffield is periodic
+
+read_data ${data_file}
+read_data data_7.lammps
+Reading data file ...
+  orthogonal box = (0 0 0) to (31.973658 34.08 128.25491)
+  4 by 4 by 2 MPI processor grid
+  reading atoms ...
+  3776 atoms
+  reading velocities ...
+  3776 velocities
+  scanning bonds ...
+  2 = max bonds/atom
+  scanning angles ...
+  1 = max angles/atom
+  orthogonal box = (0 0 0) to (31.973658 34.08 128.25491)
+  4 by 4 by 2 MPI processor grid
+  reading bonds ...
+  640 bonds
+  reading angles ...
+  320 angles
+Finding 1-2 1-3 1-4 neighbors ...
+  special bond factors lj:    0        0        0       
+  special bond factors coul:  0        0        0       
+     2 = max # of 1-2 neighbors
+     1 = max # of 1-3 neighbors
+     1 = max # of 1-4 neighbors
+     2 = max # of special neighbors
+  special bonds CPU = 0.002 seconds
+  read_data CPU = 0.160 seconds
+
+pair_coeff 1 1 0.61185 4.38
+pair_coeff 2 2 0.08604 3.41
+pair_coeff 3 3 0.43738 5.04
+pair_coeff 4 4 1.12572 5.06
+pair_coeff 5 5 0.05497 3.37
+pair_coeff 6 6 0.05497 3.37
+
+bond_coeff 1 200 2.7076
+bond_coeff 2 200 3.8213
+
+angle_coeff 1  200 116.035
+
+
+#groups
+group ele type 5 6
+2496 atoms in group ele
+group top type 6
+1248 atoms in group top
+group bot type 5
+1248 atoms in group bot
+group bmi type 1 2 3
+960 atoms in group bmi
+group electrolyte type 1 2 3 4
+1280 atoms in group electrolyte
+
+# settings
+variable temp0 equal 500.0
+variable eta equal 1.979
+timestep 2.0
+
+# basic fixes
+fix nvt electrolyte nvt temp ${temp0} ${temp0} 100
+fix nvt electrolyte nvt temp 500 ${temp0} 100
+fix nvt electrolyte nvt temp 500 500 100
+fix shake bmi shake 1e-4 20 0 b 1 2 a 1
+Finding SHAKE clusters ...
+       0 = # of size 2 clusters
+       0 = # of size 3 clusters
+       0 = # of size 4 clusters
+     320 = # of frozen angles
+  find clusters CPU = 0.001 seconds
+
+variable q atom q
+compute qtop top reduce sum v_q
+compute qbot bot reduce sum v_q
+compute ctemp electrolyte temp
+
+# log and log to csv
+thermo_style custom step c_ctemp epair etotal c_qbot c_qtop
+thermo 10000
+variable s equal step
+variable t equal c_ctemp
+variable e equal epair
+variable qtop equal c_qtop
+fix fxprint all print 100 "${s} ${t} ${e} ${qtop}" file log.csv screen no
+
+# dumps
+dump            trajectory electrolyte xyz 100 positions.xyz
+dump_modify     trajectory element N N N F C C
+dump            lammpstrj electrolyte custom 100 dump.lammpstrj id type xu yu zu vx vy vz
+
+variable efield equal 0.0/lz
+fix fxe ele electrode/efield/thermo ${efield} eta ${eta} temp ${temp0} 100 ${seed} qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+fix fxe ele electrode/efield/thermo 0 eta ${eta} temp ${temp0} 100 ${seed} qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+fix fxe ele electrode/efield/thermo 0 eta 1.979 temp ${temp0} 100 ${seed} qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+fix fxe ele electrode/efield/thermo 0 eta 1.979 temp 500 100 ${seed} qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+fix fxe ele electrode/efield/thermo 0 eta 1.979 temp 500 100 7 qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+
+run 500000
+
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+Your simulation uses code contributions which should be cited:
+
+- kspace_style pppm/electrode command: https://doi.org/10.1063/5.0063381
+
+@article{Ahrens2021,
+author = {Ahrens-Iwers, Ludwig J.V. and Mei{\ss}ner, Robert H.},
+doi = {10.1063/5.0063381},
+title = {{Constant potential simulations on a mesh}},
+journal = {Journal of Chemical Physics},
+year = {2021}
+volume = {155},
+pages = {104104},
+}
+- Type Label Framework: https://doi.org/10.1021/acs.jpcb.3c08419
+
+@Article{Gissinger24,
+ author = {Jacob R. Gissinger, Ilia Nikiforov, Yaser Afshar, Brendon Waters, Moon-ki Choi, Daniel S. Karls, Alexander Stukowski, Wonpil Im, Hendrik Heinz, Axel Kohlmeyer, and Ellad B. Tadmor},
+ title = {Type Label Framework for Bonded Force Fields in LAMMPS},
+ journal = {J. Phys. Chem. B},
+ year =    2024,
+ volume =  128,
+ number =  13,
+ pages =   {3282--3297}
+}
+
+- fix electrode command: https://doi.org/10.1063/5.0099239
+
+@article{Ahrens2022
+author = {Ahrens-Iwers, Ludwig J.V. and Janssen, Mathijs and Tee, Shern R. and Mei{\ss}ner, Robert H.},
+doi = {10.1063/5.0099239},
+title = {{ELECTRODE: An electrochemistry package for LAMMPS}},
+journal = {The Journal of Chemical Physics},
+year = {2022}
+volume = {157},
+pages = {084801},
+}
+CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE-CITE
+
+PPPM/electrode initialization ...
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.20325166
+  grid = 20 24 60
+  stencil order = 5
+  estimated absolute RMS force accuracy = 0.00026598932
+  estimated relative force accuracy = 8.0101895e-07
+  using double precision FFTW3
+  3d grid and FFT values/proc = 5460 960
+Generated 15 of 15 mixed pair_coeff terms from arithmetic mixing rule
+Neighbor list info ...
+  update: every = 1 steps, delay = 0 steps, check = yes
+  max neighbors/atom: 2000, page size: 100000
+  master list distance cutoff = 17
+  ghost atom cutoff = 17
+  binsize = 8.5, bins = 4 5 16
+  2 neighbor lists, perpetual/occasional/extra = 2 0 0
+  (1) pair lj/cut/coul/long, perpetual
+      attributes: half, newton on
+      pair build: half/bin/newton
+      stencil: half/bin/3d
+      bin: standard
+  (2) fix electrode/efield/thermo, perpetual, copy from (1)
+      attributes: half, newton on
+      pair build: copy
+      stencil: none
+      bin: none
+ELECTRODE vector setup with KSpace pppm/electrode
+Vacuum capacitance: 0.05419
+Per MPI rank memory allocation (min/avg/max) = 9.352 | 9.549 | 10.12 Mbytes
+   Step        c_ctemp         E_pair         TotEng         c_qbot         c_qtop    
+         0   503.99623      26171972       26173413       0.21693989    -0.21693989   
+     10000   512.71917      26171873       26173339       0.084094227   -0.084094227  
+     20000   503.93186      26171899       26173339      -0.035528724    0.035528724  
+     30000   473.94725      26171936       26173291       0.24375352    -0.24375352   
+     40000   503.15066      26171950       26173389       0.074219931   -0.074219931  
+     50000   496.4109       26171860       26173279       0.010352009   -0.010352009  
+     60000   509.81667      26171908       26173365       0.33990269    -0.33990269   
+     70000   501.14312      26171939       26173372       0.050360563   -0.050360563  
+     80000   516.71842      26171858       26173335      -0.025451723    0.025451723  
+     90000   514.25533      26171989       26173459       0.15652328    -0.15652328   
+    100000   506.07444      26171898       26173344       0.16254553    -0.16254553   
+    110000   493.30083      26171890       26173301      -0.020338578    0.020338578  
+    120000   496.66801      26171901       26173321       0.19028065    -0.19028065   
+    130000   487.37889      26171925       26173318       0.09510753    -0.09510753   
+    140000   505.23879      26171861       26173305      -0.075584859    0.075584859  
+    150000   496.55061      26171937       26173356      -0.045912838    0.045912838  
+    160000   515.82194      26171903       26173377      -0.17389317     0.17389317   
+    170000   497.74495      26171894       26173316      -0.026530635    0.026530635  
+    180000   496.32216      26171861       26173280       0.16585196    -0.16585196   
+    190000   514.5338       26171912       26173382       0.12014679    -0.12014679   
+    200000   479.30408      26171868       26173238       0.097770338   -0.097770338  
+    210000   502.45707      26171921       26173357       0.15941256    -0.15941256   
+    220000   496.28346      26171921       26173340       0.0072664042  -0.0072664042 
+    230000   492.53402      26171973       26173381       0.26301365    -0.26301365   
+    240000   509.96057      26171936       26173394       0.10403826    -0.10403826   
+    250000   501.64212      26171862       26173296       0.19443417    -0.19443417   
+    260000   499.31196      26171947       26173374       0.10890032    -0.10890032   
+    270000   500.34931      26171974       26173405       0.26923505    -0.26923505   
+    280000   511.53566      26171919       26173381       0.030474025   -0.030474025  
+    290000   516.61617      26171867       26173344      -0.22084704     0.22084704   
+    300000   509.83269      26171909       26173367      -0.058263831    0.058263831  
+    310000   501.92423      26171941       26173376       0.055907019   -0.055907019  
+    320000   482.94399      26171914       26173295       0.14888022    -0.14888022   
+    330000   489.82886      26171890       26173290       0.021758378   -0.021758378  
+    340000   507.01814      26171956       26173405      -0.37884976     0.37884976   
+    350000   506.7434       26171998       26173446      -0.31298798     0.31298798   
+    360000   488.08328      26171893       26173288      -0.35844299     0.35844299   
+    370000   504.71873      26171992       26173435      -0.17402078     0.17402078   
+    380000   524.21343      26171946       26173444      -0.47334613     0.47334613   
+    390000   487.65076      26171939       26173333      -0.40021081     0.40021081   
+    400000   486.0962       26171896       26173286      -0.06323292     0.06323292   
+    410000   497.5454       26171952       26173374      -0.01298932     0.01298932   
+    420000   495.66361      26171930       26173347      -0.024468044    0.024468044  
+    430000   468.27235      26171993       26173332       0.39232343    -0.39232343   
+    440000   510.41781      26171961       26173420       0.40845631    -0.40845631   
+    450000   488.76883      26171977       26173374       0.41938441    -0.41938441   
+    460000   514.37031      26171836       26173306       0.61110769    -0.61110769   
+    470000   515.56748      26171922       26173395       0.67306226    -0.67306226   
+    480000   506.08621      26171885       26173332       0.041303029   -0.041303029  
+    490000   513.78435      26171933       26173401       0.52315106    -0.52315106   
+    500000   494.81683      26171908       26173323       0.14575217    -0.14575217   
+Loop time of 9705.52 on 32 procs for 500000 steps with 3776 atoms
+
+Performance: 8.902 ns/day, 2.696 hours/ns, 51.517 timesteps/s, 194.529 katom-step/s
+100.0% CPU use with 32 MPI tasks x 1 OpenMP threads
+
+MPI task timing breakdown:
+Section |  min time  |  avg time  |  max time  |%varavg| %total
+---------------------------------------------------------------
+Pair    | 1594.5     | 2567.8     | 3684.9     |1695.1 | 26.46
+Bond    | 0.4213     | 0.4876     | 0.67674    |   7.4 |  0.01
+Kspace  | 658.63     | 1770.1     | 2740.9     |2043.0 | 18.24
+Neigh   | 113.39     | 114.62     | 115.91     |  10.7 |  1.18
+Comm    | 223.06     | 246.3      | 269.3      | 141.7 |  2.54
+Output  | 6.4119     | 7.2356     | 7.688      |  11.9 |  0.07
+Modify  | 4956.3     | 4988.1     | 5020.5     |  34.5 | 51.39
+Other   |            | 10.93      |            |       |  0.11
+
+Nlocal:            118 ave         130 max         105 min
+Histogram: 3 1 3 3 6 2 4 3 3 4
+Nghost:        5479.28 ave        5523 max        5445 min
+Histogram: 1 5 2 8 4 2 6 3 0 1
+Neighs:        72298.2 ave      104659 max       43020 min
+Histogram: 9 7 0 0 0 0 0 8 0 8
+
+Total # of neighbors = 2313543
+Ave neighs/atom = 612.69677
+Ave special neighs/atom = 0.50847458
+Neighbor list builds = 15919
+Dangerous builds = 0
+
+write_data "data.final"
+System init for write_data ...
+PPPM/electrode initialization ...
+  using 12-bit tables for long-range coulomb (src/kspace.cpp:342)
+  G vector (1/distance) = 0.20325166
+  grid = 20 24 60
+  stencil order = 5
+  estimated absolute RMS force accuracy = 0.00026598892
+  estimated relative force accuracy = 8.0101773e-07
+  using double precision FFTW3
+  3d grid and FFT values/proc = 5460 960
+Generated 15 of 15 mixed pair_coeff terms from arithmetic mixing rule
+Total wall time: 2:41:51

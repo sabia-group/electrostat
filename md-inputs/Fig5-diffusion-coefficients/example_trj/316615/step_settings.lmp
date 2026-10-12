@@ -1,0 +1,2 @@
+variable data_file string data_7.lammps
+variable seed equal 7

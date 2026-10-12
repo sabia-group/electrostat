@@ -1,0 +1,45 @@
+# set boundary in main script because ffield is periodic
+units real
+# distribute electrode atoms among all processors:
+if "$(extract_setting(world_size) % 2) == 0" then "processors * * 2"
+
+atom_style full
+pair_style lj/cut/coul/long 15
+pair_modify mix arithmetic
+bond_style harmonic
+angle_style harmonic
+kspace_style pppm/electrode 1e-6
+# kspace_modify in main script because ffield is periodic
+
+read_data "equi.data"
+
+pair_coeff 1 1 0.61185 4.38
+pair_coeff 2 2 0.08604 3.41
+pair_coeff 3 3 0.43738 5.04
+pair_coeff 4 4 1.12572 5.06
+pair_coeff 5 5 0.05497 3.37
+pair_coeff 6 6 0.05497 3.37
+
+bond_coeff 1 200 2.7076
+bond_coeff 2 200 3.8213
+
+angle_coeff 1  200 116.035
+
+# replicate 4 4 1 # test different sys sizes
+
+group ele type 5 6
+group top type 6
+group bot type 5
+
+group bmi type 1 2 3
+group electrolyte type 1 2 3 4
+
+variable temp0 equal 500.0
+fix shake bmi shake 1e-4 20 0 b 1 2 a 1
+
+variable q atom q
+compute qtop top reduce sum v_q
+compute qbot bot reduce sum v_q
+compute ctemp electrolyte temp
+
+variable eta equal 1.979 

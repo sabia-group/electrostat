@@ -1,0 +1,35 @@
+# electrodes with constant E-field using finite field method
+# for z-periodic graphene-ionic liquid supercapacitor
+
+boundary p p p # ffield uses periodic z-boundary and no slab
+include settings.lmp # styles, groups, computes and fixes
+
+run 0
+
+thermo_style custom step c_ctemp epair etotal c_qbot c_qtop
+fix nvt electrolyte nvt temp ${temp0} ${temp0} 100
+variable efield equal 0.0/lz
+fix fxe ele electrode/efield/thermo ${efield} eta 1.979 temp ${temp0} 100 1337 qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+
+variable s equal step
+variable t equal c_ctemp
+variable e equal epair
+variable qtop equal c_qtop
+
+thermo 10000
+timestep 5.0
+fix fxprint1 all print 1000 "${s} ${t} ${e} ${qtop}" file log1.csv screen no
+run 2000000
+timestep 2.0
+unfix fxprint1
+fix fxprint2 all print 1000 "${s} ${t} ${e} ${qtop}" file log2.csv screen no
+run 500000
+
+variable i loop 200
+    label loop_start
+    velocity electrolyte create ${temp0} ${i}1137 dist gaussian mom yes rot yes
+    run 0
+    run 2500
+    write_data data_${i}.lammps
+    next i
+    jump SELF loop_start

@@ -1,0 +1,12 @@
+# electrodes with electrostat 
+# for graphene-ionic liquid supercapacitor
+boundary p p p # periodic calculation
+include step_settings.lmp # data_file, seed
+include settings.lmp # styles, groups, computes and fixes
+
+variable efield equal 0.0/lz
+fix fxe ele electrode/efield/thermo ${efield} eta ${eta} temp ${temp0} 100 ${seed} qtotal 0.0 offset_group bot sub_groups bot top algo mat_inv read_inv inv.csv
+
+run 500000
+
+write_data "data.final"

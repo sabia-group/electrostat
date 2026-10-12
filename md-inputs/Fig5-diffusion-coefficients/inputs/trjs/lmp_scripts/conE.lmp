@@ -1,0 +1,13 @@
+# electrodes with constant E-field
+# for graphene-ionic liquid supercapacitor
+boundary p p p # periodic calculation
+include step_settings.lmp # data_file, seed
+include settings.lmp # styles, groups, computes and fixes
+
+# constant E-field
+variable efield equal 0.0/lz
+fix es ele electrode/efield ${efield} eta ${eta} qtotal 0.0 offset_group bot algo mat_inv read_inv inv.csv
+
+run 500000
+
+write_data "data.final"
